@@ -1,24 +1,29 @@
 ﻿using ProactiveCache.Internal;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace ProactiveCache
 {
-    public class MemoryCache<Tk, Tv> : ICache<Tk, Tv>
+    public class MemoryCache<TKey, TValue> : ICache<TKey, TValue>
     {
-        private readonly int _expirationScanFrequencySec;
-        private readonly ConcurrentDictionary<Tk, CacheEntry> _entries;
-        private long _nextExpirationScan;
-        private Task _expirationScan;
 
-        private struct CacheEntry
+        public const int CLEAN_FREQUENCY_SEC = 600;
+
+        private readonly int _cleanFrequencySec;
+        protected readonly ConcurrentDictionary<TKey, CacheEntry> _entries;
+        private long _nextClean;
+        private Task _clean;
+
+        protected struct CacheEntry
         {
             private readonly long _expireAt;
-            public readonly ICacheEntry<Tv> Value;
+            public readonly ICacheEntry<TValue> Value;
 
-            public CacheEntry(ICacheEntry<Tv> value, TimeSpan expire_ttl, long now_sec)
+            public CacheEntry(ICacheEntry<TValue> value, TimeSpan expire_ttl, long now_sec)
             {
                 _expireAt = now_sec + expire_ttl.Ticks / TimeSpan.TicksPerSecond;
                 Value = value;
@@ -29,15 +34,17 @@ namespace ProactiveCache
 
         public int Count => _entries.Count;
 
-        public MemoryCache(int expiration_scan_frequency_sec = 600)
+        protected uint NowSec => ProCacheTimer.NowSec;
+
+        public MemoryCache(int clean_frequency_sec = CLEAN_FREQUENCY_SEC)
         {
-            _expirationScanFrequencySec = expiration_scan_frequency_sec;
-            _nextExpirationScan = ProCacheTimer.NowSec + _expirationScanFrequencySec;
-            _entries = new ConcurrentDictionary<Tk, CacheEntry>();
-            _expirationScan = Task.CompletedTask;
+            _cleanFrequencySec = clean_frequency_sec;
+            _nextClean = ProCacheTimer.NowSec + _cleanFrequencySec;
+            _entries = new ConcurrentDictionary<TKey, CacheEntry>();
+            _clean = Task.CompletedTask;
         }
 
-        public void Set(Tk key, ICacheEntry<Tv> value, TimeSpan expiration_time)
+        public void Set(TKey key, ICacheEntry<TValue> value, TimeSpan expiration_time)
         {
             var nowSec = ProCacheTimer.NowSec;
             var entry = new CacheEntry(value, expiration_time, nowSec);
@@ -46,9 +53,9 @@ namespace ProactiveCache
             StartScanForExpiredItemsIfNeeded(nowSec);
         }
 
-        public bool TryGet(Tk key, out ICacheEntry<Tv> value)
+        public bool TryGet(TKey key, out ICacheEntry<TValue> value)
         {
-            if (!_entries.TryGetValue(key, out var entry) || entry.IsExpired(ProCacheTimer.NowSec))
+            if (!_entries.TryGetValue(key, out var entry) || entry.IsExpired(NowSec))
             {
                 value = null;
                 return false;
@@ -58,26 +65,24 @@ namespace ProactiveCache
             return true;
         }
 
-        public void Remove(Tk key) => _entries.TryRemove(key, out var _);
+        public void Remove(TKey key) => _entries.TryRemove(key, out var _);
 
         private void StartScanForExpiredItemsIfNeeded(long now_sec)
         {
-            var nextExpirationScan = Volatile.Read(ref _nextExpirationScan);
-            if (now_sec >= nextExpirationScan && _expirationScan.IsCompleted && Interlocked.CompareExchange(ref _nextExpirationScan, now_sec + _expirationScanFrequencySec, nextExpirationScan) == nextExpirationScan)
+            var nextExpirationScan = Volatile.Read(ref _nextClean);
+            if (now_sec >= nextExpirationScan && _clean.IsCompleted && Interlocked.CompareExchange(ref _nextClean, now_sec + _cleanFrequencySec, nextExpirationScan) == nextExpirationScan)
             {
-                _expirationScan = Task.Factory.StartNew(ScanForExpiredItems, this,
-                    CancellationToken.None, TaskCreationOptions.DenyChildAttach, TaskScheduler.Default);
+                _clean = Task.Factory.StartNew(ScanForExpiredItems, CancellationToken.None, TaskCreationOptions.DenyChildAttach, TaskScheduler.Default);
             }
         }
 
-        private static void ScanForExpiredItems(object state)
+        protected void ScanForExpiredItems()
         {
-            var cache = (MemoryCache<Tk, Tv>)state;
             var nowSec = ProCacheTimer.NowSec;
-            foreach (var entry in cache._entries.ToArray())
+            foreach (var entry in _entries.ToArray())
             {
                 if (entry.Value.IsExpired(nowSec))
-                    cache._entries.TryRemove(entry.Key, out var _);
+                    _entries.TryRemove(entry.Key, out var _);
             }
         }
     }

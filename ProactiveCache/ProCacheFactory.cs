@@ -23,11 +23,11 @@ public static class ProCacheFactory
     public static Options<Tk, Tv> CreateOptions<Tk, Tv>(TimeSpan expire_ttl, TimeSpan outdate_ttl, ICache<Tk, Tv> external_cache)
         => new Options<Tk, Tv>(external_cache, expire_ttl, outdate_ttl);
 
-    public static Options<Tk, Tv> CreateOptions<Tk, Tv>(TimeSpan expire_ttl, TimeSpan outdate_ttl, int cache_expiration_scan_frequency_sec = 600)
+    public static Options<Tk, Tv> CreateOptions<Tk, Tv>(TimeSpan expire_ttl, TimeSpan outdate_ttl, int cache_expiration_scan_frequency_sec = MemoryCache<Tk, Tv>.CLEAN_FREQUENCY_SEC)
         => new Options<Tk, Tv>(new MemoryCache<Tk, Tv>(cache_expiration_scan_frequency_sec), expire_ttl, outdate_ttl);
 
     public static ProCache<Tk, Tv> CreateCache<Tk, Tv>(this Options<Tk, Tv> options, Func<Tk, object, CancellationToken, ValueTask<Tv>> getter)
-            => new ProCache<Tk, Tv>(getter, options.ExpireTtl, options.OutdateTtl, options.ExternalCache);
+        => new ProCache<Tk, Tv>(getter, options.ExpireTtl, options.OutdateTtl, options.ExternalCache);
 
     public static ProCache<Tk, Tv> CreateCache<Tk, Tv>(this Options<Tk, Tv> options, Func<Tk, CancellationToken, ValueTask<Tv>> getter)
         => new ProCache<Tk, Tv>((k, _, c) => getter(k, c), options.ExpireTtl, options.OutdateTtl, options.ExternalCache);
@@ -37,4 +37,5 @@ public static class ProCacheFactory
 
     public static ProCacheBatch<Tk, Tv> CreateCache<Tk, Tv>(this Options<Tk, Tv> options, Func<Tk[], CancellationToken, ValueTask<IEnumerable<KeyValuePair<Tk, Tv>>>> getter)
         => new ProCacheBatch<Tk, Tv>((k, _, c) => getter(k, c), options.ExpireTtl, options.OutdateTtl, options.ExternalCache);
+
 }

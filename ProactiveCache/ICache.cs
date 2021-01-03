@@ -2,10 +2,10 @@
 
 namespace ProactiveCache
 {
-    public interface ICache<Tkey, Tval>
+    public interface ICache<TKey, TValue>
     {
-        void Set(Tkey key, ICacheEntry<Tval> value, TimeSpan expiration_time);
-        bool TryGet(Tkey key, out ICacheEntry<Tval> value);
-        void Remove(Tkey key);
+        void Set(TKey key, ICacheEntry<TValue> value, TimeSpan expiration_time);
+        bool TryGet(TKey key, out ICacheEntry<TValue> value);
+        void Remove(TKey key);
     }
 }
