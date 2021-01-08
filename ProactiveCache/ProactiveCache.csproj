@@ -8,7 +8,7 @@
         <RepositoryUrl>https://github.com/bopohaa/ProactiveCache</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <RootNamespace>ProactiveCache</RootNamespace>
-        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <GenerateDocumentationFile>false</GenerateDocumentationFile>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Version>1.0.0.0</Version>
         <PackageId>ProactiveCache</PackageId>

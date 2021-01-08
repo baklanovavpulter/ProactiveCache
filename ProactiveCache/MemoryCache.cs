@@ -44,7 +44,7 @@ namespace ProactiveCache
             _clean = Task.CompletedTask;
         }
 
-        public void Set(TKey key, ICacheEntry<TValue> value, TimeSpan expiration_time)
+        public virtual void Set(TKey key, ICacheEntry<TValue> value, TimeSpan expiration_time)
         {
             var nowSec = ProCacheTimer.NowSec;
             var entry = new CacheEntry(value, expiration_time, nowSec);
@@ -53,7 +53,7 @@ namespace ProactiveCache
             StartScanForExpiredItemsIfNeeded(nowSec);
         }
 
-        public bool TryGet(TKey key, out ICacheEntry<TValue> value)
+        public virtual bool TryGet(TKey key, out ICacheEntry<TValue> value)
         {
             if (!_entries.TryGetValue(key, out var entry) || entry.IsExpired(NowSec))
             {
@@ -65,7 +65,7 @@ namespace ProactiveCache
             return true;
         }
 
-        public void Remove(TKey key) => _entries.TryRemove(key, out var _);
+        public virtual void Remove(TKey key) => _entries.TryRemove(key, out var _);
 
         private void StartScanForExpiredItemsIfNeeded(long now_sec)
         {
@@ -76,7 +76,7 @@ namespace ProactiveCache
             }
         }
 
-        protected void ScanForExpiredItems()
+        protected virtual void ScanForExpiredItems()
         {
             var nowSec = ProCacheTimer.NowSec;
             foreach (var entry in _entries.ToArray())

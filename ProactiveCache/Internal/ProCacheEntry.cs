@@ -16,16 +16,17 @@ namespace ProactiveCache.Internal
 
         public bool IsCompleted => _hasValue ? true : _valueAsTask.IsCompleted;
 
-        public ValueTask<Tval> GetValue() => Volatile.Read(ref _hasValue) ?
-            new ValueTask<Tval>((Tval)Volatile.Read(ref _value)) :
-            new ValueTask<Tval>(_valueAsTask.ContinueWith(t => t.Result.Item2, TaskContinuationOptions.OnlyOnRanToCompletion));
+        public ValueTask<Tval> GetValue() => Volatile.Read(ref _hasValue) 
+            ? new ValueTask<Tval>((Tval)Volatile.Read(ref _value)) 
+            : new ValueTask<Tval>(_valueAsTask.ContinueWith(t => t.Result.Item2, TaskContinuationOptions.OnlyOnRanToCompletion));
 
-        internal ValueTask<(bool, Tval)> GetValueWithState() => Volatile.Read(ref _hasValue) ?
-            new ValueTask<(bool, Tval)>((!Volatile.Read(ref _isEmpty), (Tval)Volatile.Read(ref _value))) :
-            new ValueTask<(bool, Tval)>(_valueAsTask);
+        internal ValueTask<(bool, Tval)> GetValueWithState() => Volatile.Read(ref _hasValue) 
+            ? new ValueTask<(bool, Tval)>((!Volatile.Read(ref _isEmpty), (Tval)Volatile.Read(ref _value))) 
+            : new ValueTask<(bool, Tval)>(_valueAsTask);
 
-        internal (bool, Tval) GetCompletedValue()
-            => Volatile.Read(ref _hasValue) ? (!Volatile.Read(ref _isEmpty), (Tval)_value) : _valueAsTask.Result;
+        internal (bool, Tval) GetCompletedValue() => Volatile.Read(ref _hasValue) 
+            ? (!Volatile.Read(ref _isEmpty), (Tval)_value) 
+            : _valueAsTask.Result;
 
         internal ProCacheEntry(Task<(bool, Tval)> value, TimeSpan outdated_ttl)
         {
@@ -68,8 +69,9 @@ namespace ProactiveCache.Internal
         internal void Reset()
             => _outdatedSec &= ~OUTDATED_FLAG;
 
-
         private static long GetOutdatedSec(TimeSpan outdated_ttl)
             => ProCacheTimer.NowSec + outdated_ttl.Ticks / TimeSpan.TicksPerSecond;
+
     }
+
 }
